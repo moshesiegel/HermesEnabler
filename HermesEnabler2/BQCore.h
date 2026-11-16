@@ -33,6 +33,10 @@ void BQSetClass2ParentEnabled(BOOL on);
 BOOL BQCheckAccess(NSString *target, BOOL writable, NSString **err);
 
 // ---- MobileGestalt ---------------------------------------------------------
+// Read-only report of the live cache's identity: build string, CacheUUID,
+// CacheData length, CacheExtra count, and whether a verified layout is bundled
+// for this build. Writes nothing. Used to capture a new build's CacheUUID.
+NSString *BQDiagnostics(void);
 NSMutableDictionary *BQLoadGestalt(NSString **err);
 BOOL BQSaveGestalt(NSDictionary *dict, NSString **err);
 BOOL BQRestoreGestalt(NSString **err);

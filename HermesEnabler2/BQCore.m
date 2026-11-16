@@ -1216,6 +1216,39 @@ static const BQDeviceBrandLayout *bq_currentLayout(void) {
     return sysctlbyname("kern.osversion", build, &length, NULL, 0) == 0 ? bq_layoutForBuild(build) : NULL;
 }
 
+NSString *BQDiagnostics(void) {
+    char build[128] = {0};
+    size_t buildLength = sizeof(build);
+    NSString *buildString = sysctlbyname("kern.osversion", build, &buildLength, NULL, 0) == 0
+        ? [NSString stringWithUTF8String:build]
+        : @"(sysctl failed)";
+
+    NSString *err = nil;
+    NSMutableDictionary *plist = BQLoadGestalt(&err);
+    NSString *uuid = @"(unavailable)";
+    NSString *dataLength = @"(unavailable)";
+    NSString *extraCount = @"(unavailable)";
+    if (plist) {
+        id cacheUUID = plist[@"CacheUUID"];
+        if ([cacheUUID isKindOfClass:[NSString class]]) uuid = cacheUUID;
+        id cacheData = plist[@"CacheData"];
+        if ([cacheData isKindOfClass:[NSData class]]) dataLength = [NSString stringWithFormat:@"%lu", (unsigned long)[cacheData length]];
+        id cacheExtra = plist[@"CacheExtra"];
+        if ([cacheExtra isKindOfClass:[NSDictionary class]]) extraCount = [NSString stringWithFormat:@"%lu", (unsigned long)[cacheExtra count]];
+    } else if (err) {
+        uuid = [NSString stringWithFormat:@"(load failed: %@)", err];
+    }
+
+    const BQDeviceBrandLayout *layout = bq_layoutForBuild(build);
+    NSString *verified = layout
+        ? (layout->recoveryVerified ? @"yes (recovery-verified)" : @"yes (not recovery-verified)")
+        : @"no";
+
+    return [NSString stringWithFormat:
+        @"Build: %@\nCacheUUID: %@\nCacheData length: %@\nCacheExtra keys: %@\nBundled layout for this build: %@",
+        buildString, uuid, dataLength, extraCount, verified];
+}
+
 static BOOL bq_buildDefault(const char *build, NSString *key, uint32_t *value) {
     NSDictionary *entry = bq_buildData(@"MGDefaults", [NSString stringWithUTF8String:build]);
     id number = entry[key];

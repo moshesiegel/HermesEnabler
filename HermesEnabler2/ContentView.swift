@@ -28,6 +28,9 @@ struct ContentView: View {
                         NavigationLink { BackupView(model: model) } label: {
                             Label("MG Backups", systemImage: "archivebox")
                         }
+                        NavigationLink { DiagnosticsView() } label: {
+                            Label("Diagnostics", systemImage: "info.circle")
+                        }
                     }
                     Section("Status") {
                         Text(LocalizedStringKey(model.message))
@@ -72,6 +75,26 @@ struct ContentView: View {
             Button("OK", role: .cancel) { }
         } message: { error in
             Text(error.message)
+        }
+    }
+}
+
+struct DiagnosticsView: View {
+    @State private var report = "Reading..."
+
+    var body: some View {
+        ScrollView {
+            Text(report)
+                .font(.system(.footnote, design: .monospaced))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+        }
+        .navigationTitle("Diagnostics")
+        .onAppear {
+            BQWorkQueue().async {
+                let text = BQDiagnostics() ?? "Diagnostics unavailable."
+                DispatchQueue.main.async { report = text }
+            }
         }
     }
 }
