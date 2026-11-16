@@ -1244,9 +1244,29 @@ NSString *BQDiagnostics(void) {
         ? (layout->recoveryVerified ? @"yes (recovery-verified)" : @"yes (not recovery-verified)")
         : @"no";
 
+    NSString *groupID = BQGroupID().length ? BQGroupID() : @"(none)";
+    NSArray<NSString *> *groups = BQGroupIDs();
+    NSString *groupList = groups.count ? [groups componentsJoinedByString:@", "] : @"(none)";
+    NSString *backup = BQBackupExists() ? @"yes" : @"no";
+
+    // Tail of the escape log, written during the load attempt above. The
+    // "escape:" lines show which strategy was tried and how it failed, which is
+    // what distinguishes an OS-patched escape from an app-group problem.
+    NSString *logTail = @"(no log)";
+    NSString *logContents = [NSString stringWithContentsOfFile:BQLogPath() encoding:NSUTF8StringEncoding error:NULL];
+    if (logContents.length) {
+        NSMutableArray<NSString *> *lines = [[logContents componentsSeparatedByString:@"\n"] mutableCopy];
+        [lines removeObject:@""];
+        NSUInteger keep = 20;
+        if (lines.count > keep) [lines removeObjectsInRange:NSMakeRange(0, lines.count - keep)];
+        if (lines.count) logTail = [lines componentsJoinedByString:@"\n"];
+    }
+
     return [NSString stringWithFormat:
-        @"Build: %@\nCacheUUID: %@\nCacheData length: %@\nCacheExtra keys: %@\nBundled layout for this build: %@",
-        buildString, uuid, dataLength, extraCount, verified];
+        @"Build: %@\nCacheUUID: %@\nCacheData length: %@\nCacheExtra keys: %@\n"
+        @"Bundled layout for this build: %@\nApp group: %@\nAll groups: %@\nBackup exists: %@\n\n"
+        @"--- escape log tail ---\n%@",
+        buildString, uuid, dataLength, extraCount, verified, groupID, groupList, backup, logTail];
 }
 
 static BOOL bq_buildDefault(const char *build, NSString *key, uint32_t *value) {
